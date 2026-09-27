@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For You</title>
+<style>
+  :root{
+    --ink:#2b1d24;
+    --paper:#f6ece2;
+    --rose:#c4667a;
+    --gold:#c9a05c;
+    --line:rgba(43,29,36,0.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    min-height:100%;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:Georgia,'Iowan Old Style','Palatino Linotype',serif;
+    overflow-x:hidden;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:6vh 5vw;
+    text-align:center;
+    position:relative;
+  }
+
+  /* ---- Stage 1: start button ---- */
+  #start-screen{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:28px;
+  }
+  #start-screen h1{
+    font-size:clamp(1.6rem, 4vw, 2.6rem);
+    font-weight:400;
+    letter-spacing:0.02em;
+    max-width:14ch;
+    line-height:1.3;
+  }
+  #start-btn{
+    font-family:inherit;
+    font-size:1.05rem;
+    padding:14px 34px;
+    border-radius:999px;
+    border:1px solid var(--ink);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer;
+    transition:background .3s ease, color .3s ease;
+  }
+  #start-btn:hover{
+    background:var(--ink);
+    color:var(--paper);
+  }
+
+  /* ---- Stage 2: lyrics ---- */
+  #lyrics-stage{
+    display:none;
+    position:fixed;
+    inset:0;
+    align-items:center;
+    justify-content:center;
+  }
+  .lyric-line{
+    position:absolute;
+    font-size:clamp(1.1rem, 3vw, 1.9rem);
+    color:var(--rose);
+    opacity:0;
+    white-space:nowrap;
+    animation:sway 9s ease-in-out infinite, arrive 1.2s ease forwards;
+  }
+  @keyframes arrive{
+    from{opacity:0; filter:blur(4px);}
+    to{opacity:0.9; filter:blur(0);}
+  }
+  @keyframes sway{
+    0%{transform:translate(0,0) rotate(0deg);}
+    25%{transform:translate(12px,-10px) rotate(1deg);}
+    50%{transform:translate(-6px,8px) rotate(-1deg);}
+    75%{transform:translate(-14px,-6px) rotate(0.5deg);}
+    100%{transform:translate(0,0) rotate(0deg);}
+  }
+
+  /* ---- Stage 3: photos ---- */
+  #photo-stage{
+    display:none;
+    position:relative;
+    width:min(90vw,420px);
+    height:min(90vw,420px);
+  }
+  .photo{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border:6px solid var(--paper);
+    box-shadow:0 12px 30px rgba(0,0,0,0.25);
+    opacity:0;
+  }
+  .photo.her{
+    transform:rotate(-6deg) translate(-8%, -4%);
+    animation:slideInLeft 1.1s ease forwards;
+  }
+  .photo.me{
+    transform:rotate(6deg) translate(8%, 4%);
+    animation:slideInRight 1.1s ease 0.4s forwards;
+  }
+  @keyframes slideInLeft{
+    from{opacity:0; transform:translate(-60%,-4%) rotate(-14deg);}
+    to{opacity:1; transform:translate(-8%,-4%) rotate(-6deg);}
+  }
+  @keyframes slideInRight{
+    from{opacity:0; transform:translate(60%,4%) rotate(14deg);}
+    to{opacity:1; transform:translate(8%,4%) rotate(6deg);}
+  }
+
+  /* ---- Stage 4: message ---- */
+  #message-stage{
+    display:none;
+    max-width:32ch;
+  }
+  #message-stage p{
+    font-size:clamp(1.2rem, 3.2vw, 1.7rem);
+    line-height:1.6;
+    opacity:0;
+    animation:fadeIn 1.6s ease forwards;
+  }
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .nav-btn{
+    position:fixed;
+    bottom:22px;
+    font-size:0.8rem;
+    color:var(--ink);
+    opacity:0.5;
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-family:inherit;
+    transition:opacity .2s ease;
+  }
+  .nav-btn:hover{ opacity:0.9; }
+  .skip{ right:22px; }
+  .back{ left:22px; display:none; }
+</style>
+</head>
+<body>
+
+  <!-- STAGE 1 -->
+  <div id="start-screen">
+    <h1>i made you something</h1>
+    <button id="start-btn">open it</button>
+  </div>
+
+  <!-- STAGE 2: floating lyrics -->
+  <div id="lyrics-stage"></div>
+
+  <!-- STAGE 3: photos -->
+  <div id="photo-stage">
+    <img class="photo her" src="photo1.png" alt="her">
+    <img class="photo me" src="photo2.png" alt="us">
+  </div>
+
+  <!-- STAGE 4: message -->
+  <div id="message-stage">
+    <p id="message-text"></p>
+  </div>
+
+  <button class="nav-btn back" id="back-btn">back</button>
+  <button class="nav-btn skip" id="skip-btn">skip</button>
+
+  <audio id="song" src="song.mp3"></audio>
+
+<script>
+  // ====== CUSTOMIZE THESE ======
+  const LYRICS = [
+    "put a line here",
+    "and another line here",
+    "this one floats too",
+    "keep it short, one phrase per line",
+    "it'll fade in one by one"
+  ];
+  const MESSAGE = "Write the message you want her to read here. This is the part that matters most, so take your time with it.";
+  const LYRIC_INTERVAL_MS = 2200;   // time between each lyric line appearing
+  const PHOTO_STAGE_DELAY_MS = 2000; // how long photos stay before the message
+  // ==============================
+
+  const startScreen = document.getElementById('start-screen');
+  const lyricsStage = document.getElementById('lyrics-stage');
+  const photoStage = document.getElementById('photo-stage');
+  const messageStage = document.getElementById('message-stage');
+  const messageText = document.getElementById('message-text');
+  const song = document.getElementById('song');
+  const skipBtn = document.getElementById('skip-btn');
+  const backBtn = document.getElementById('back-btn');
+
+  messageText.textContent = MESSAGE;
+
+  const STAGES = ['start', 'lyrics', 'photos', 'message'];
+  let stageIndex = 0;
+  let pendingTimers = [];
+
+  function clearPendingTimers(){
+    pendingTimers.forEach(t => clearTimeout(t));
+    pendingTimers = [];
+  }
+
+  function hideAll(){
+    startScreen.style.display = 'none';
+    lyricsStage.style.display = 'none';
+    photoStage.style.display = 'none';
+    messageStage.style.display = 'none';
+  }
+
+  function goTo(name, {auto=false} = {}){
+    if(!auto) clearPendingTimers();
+    stageIndex = STAGES.indexOf(name);
+    hideAll();
+    backBtn.style.display = stageIndex > 0 ? 'block' : 'none';
+
+    if(name === 'lyrics'){
+      lyricsStage.style.display = 'flex';
+      lyricsStage.innerHTML = '';
+      playLyricsAnimation();
+    } else if(name === 'photos'){
+      photoStage.style.display = 'block';
+      restartPhotoAnimation();
+      pendingTimers.push(setTimeout(() => goTo('message', {auto:true}), PHOTO_STAGE_DELAY_MS + 1500));
+    } else if(name === 'message'){
+      messageStage.style.display = 'block';
+      restartMessageAnimation();
+    } else {
+      startScreen.style.display = 'flex';
+    }
+  }
+
+  function randomPos(){
+    return {
+      top: 10 + Math.random() * 70 + 'vh',
+      left: 5 + Math.random() * 70 + 'vw'
+    };
+  }
+
+  function playLyricsAnimation(){
+    LYRICS.forEach((line, i) => {
+      const t = setTimeout(() => {
+        const el = document.createElement('div');
+        el.className = 'lyric-line';
+        el.textContent = line;
+        const pos = randomPos();
+        el.style.top = pos.top;
+        el.style.left = pos.left;
+        el.style.animationDelay = (Math.random()*2) + 's, 0s';
+        lyricsStage.appendChild(el);
+      }, i * LYRIC_INTERVAL_MS);
+      pendingTimers.push(t);
+    });
+
+    const totalLyricTime = LYRICS.length * LYRIC_INTERVAL_MS + 2500;
+    pendingTimers.push(setTimeout(() => goTo('photos', {auto:true}), totalLyricTime));
+  }
+
+  function restartPhotoAnimation(){
+    // retrigger CSS animations by cloning the photo elements
+    photoStage.querySelectorAll('.photo').forEach(img => {
+      const clone = img.cloneNode(true);
+      img.parentNode.replaceChild(clone, img);
+    });
+  }
+
+  function restartMessageAnimation(){
+    const p = document.getElementById('message-text');
+    const clone = p.cloneNode(true);
+    p.parentNode.replaceChild(clone, p);
+  }
+
+  document.getElementById('start-btn').addEventListener('click', () => {
+    song.play().catch(()=>{ /* autoplay may be blocked until interaction; this click counts as interaction */ });
+    goTo('lyrics');
+  });
+
+  skipBtn.addEventListener('click', () => {
+    if(stageIndex < STAGES.length - 1){
+      goTo(STAGES[stageIndex + 1]);
+    }
+  });
+
+  backBtn.addEventListener('click', () => {
+    if(stageIndex > 0){
+      goTo(STAGES[stageIndex - 1]);
+    }
+  });
+</script>
+
+</body>
+</html>
